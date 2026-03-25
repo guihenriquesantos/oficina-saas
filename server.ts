@@ -3,11 +3,21 @@ import cors from "cors";
 import admin from "firebase-admin";
 
 // Inicialização do Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(
-    JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!)
-  ),
-});
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  // 🌐 PRODUÇÃO (Render)
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    ),
+  });
+} else {
+  // 💻 LOCAL
+  const serviceAccount = require("./serviceAccountKey.json");
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 const db = admin.firestore();
 
