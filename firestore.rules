@@ -1,0 +1,122 @@
+// ===============================================================
+// Assumed Data Model (Multi-Tenant SaaS)
+// ===============================================================
+//
+// Collection: /companies/{companyId}
+// Fields:
+//   - name: string (required)
+//   - address: string
+//   - phone: string
+//   - email: string (required)
+//   - createdAt: timestamp
+//
+// Collection: /users/{userId}
+// Fields:
+//   - name: string (required)
+//   - email: string (required)
+//   - role: string (enum: admin, employee)
+//   - companyId: string (required)
+//
+// Collection: /clients/{clientId}
+// Fields:
+//   - name: string (required)
+//   - companyId: string (required)
+//   - createdAt: timestamp
+//
+// Collection: /vehicles/{vehicleId}
+// Fields:
+//   - plate: string (required)
+//   - brand: string (required)
+//   - model: string (required)
+//   - companyId: string (required)
+//
+// Collection: /services/{serviceId}
+// Fields:
+//   - name: string (required)
+//   - price: number (required)
+//   - companyId: string (required)
+//
+// Collection: /budgets/{budgetId}
+// Fields:
+//   - clientId: string (required)
+//   - vehicleId: string (required)
+//   - vehiclePlate: string (required)
+//   - status: string (required)
+//   - totalValue: number (required)
+//   - companyId: string (required)
+//   - createdAt: timestamp
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (getUserData().role == 'admin' || request.auth.token.email == "devguihenrique@gmail.com");
+    }
+
+    // Companies
+    match /companies/{companyId} {
+      allow read: if true; // Public lookup needs company info
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (getUserData().companyId == companyId && getUserData().role == 'admin');
+    }
+
+    // Clients
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && getUserData().companyId == resource.data.companyId;
+      allow create: if isAuthenticated() && getUserData().companyId == request.resource.data.companyId;
+      allow update: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().companyId == request.resource.data.companyId;
+      allow delete: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().role == 'admin';
+    }
+
+    // Vehicles
+    match /vehicles/{vehicleId} {
+      allow read: if isAuthenticated() && getUserData().companyId == resource.data.companyId;
+      allow create: if isAuthenticated() && getUserData().companyId == request.resource.data.companyId;
+      allow update: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().companyId == request.resource.data.companyId;
+      allow delete: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().role == 'admin';
+    }
+
+    // Services
+    match /services/{serviceId} {
+      allow read: if isAuthenticated() && getUserData().companyId == resource.data.companyId;
+      allow create: if isAuthenticated() && getUserData().companyId == request.resource.data.companyId;
+      allow update: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().companyId == request.resource.data.companyId;
+      allow delete: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().role == 'admin';
+    }
+
+    // Budgets
+    match /budgets/{budgetId} {
+      allow read: if (isAuthenticated() && getUserData().companyId == resource.data.companyId) || 
+                   (resource.data.companyId != null); // Public lookup is filtered by companyId and plate
+      allow create: if isAuthenticated() && getUserData().companyId == request.resource.data.companyId;
+      allow update: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().companyId == request.resource.data.companyId;
+      allow delete: if isAuthenticated() && getUserData().companyId == resource.data.companyId && getUserData().role == 'admin';
+    }
+  }
+}

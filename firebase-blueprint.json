@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "A company tenant.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the company" },
+        "address": { "type": "string", "description": "Address of the company" },
+        "phone": { "type": "string", "description": "Contact phone" },
+        "email": { "type": "string", "description": "Company email" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user belonging to a company.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "employee"] },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "companyId"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A customer of the company.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "A vehicle belonging to a client.",
+      "type": "object",
+      "properties": {
+        "plate": { "type": "string", "description": "Unique license plate" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "string" },
+        "mileage": { "type": "number" },
+        "clientId": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["plate", "brand", "model", "clientId", "companyId"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "A service offered by the company.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "estimatedTime": { "type": "string" },
+        "active": { "type": "boolean" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "price", "companyId"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A service budget or order.",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "vehiclePlate": { "type": "string" },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "serviceId": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["pending", "approved", "executing", "finished"] },
+        "totalValue": { "type": "number" },
+        "observations": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "deliveryDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientId", "vehicleId", "status", "totalValue", "companyId"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": { "schema": "Company", "description": "Company details" },
+    "/users/{userId}": { "schema": "User", "description": "User profiles and company mapping" },
+    "/clients/{clientId}": { "schema": "Client", "description": "Company clients" },
+    "/vehicles/{vehicleId}": { "schema": "Vehicle", "description": "Company vehicles" },
+    "/services/{serviceId}": { "schema": "Service", "description": "Company services" },
+    "/budgets/{budgetId}": { "schema": "Budget", "description": "Company budgets" }
+  }
+}

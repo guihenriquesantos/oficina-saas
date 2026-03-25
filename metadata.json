@@ -1,0 +1,5 @@
+{
+  "name": "OficinaSaaS - Gestão de Oficina Mecânica",
+  "description": "Sistema SaaS completo para gestão de oficinas mecânicas, com controle de clientes, veículos, serviços e orçamentos multi-tenant.",
+  "requestFramePermissions": []
+}
