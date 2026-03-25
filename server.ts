@@ -2,18 +2,15 @@ import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
 
-// Inicialização do Firebase Admin
+// 🔥 Firebase Admin (local + render)
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  // 🌐 PRODUÇÃO (Render)
   admin.initializeApp({
     credential: admin.credential.cert(
       JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
     ),
   });
 } else {
-  // 💻 LOCAL
   const serviceAccount = require("./serviceAccountKey.json");
-
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
@@ -25,7 +22,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware de autenticação
+// 🔐 Middleware auth
 async function authMiddleware(req: any, res: any, next: any) {
   try {
     const authHeader = req.headers.authorization;
@@ -35,10 +32,9 @@ async function authMiddleware(req: any, res: any, next: any) {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
 
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.error("Auth error:", error);
@@ -46,7 +42,40 @@ async function authMiddleware(req: any, res: any, next: any) {
   }
 }
 
-// Rota para cadastrar cliente
+// 🏢 Criar empresa
+app.post("/setup-company", authMiddleware, async (req: any, res: any) => {
+  try {
+    const { companyName } = req.body;
+    const uid = req.user.uid;
+
+    if (!companyName) {
+      return res.status(400).json({ error: "Nome da empresa é obrigatório" });
+    }
+
+    const companyRef = await db.collection("companies").add({
+      name: companyName,
+      ownerId: uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const companyId = companyRef.id;
+
+    await db.collection("users").doc(uid).update({
+      companyId,
+      role: "owner",
+    });
+
+    return res.json({
+      message: "Empresa criada com sucesso",
+      companyId,
+    });
+  } catch (error) {
+    console.error("Error creating company:", error);
+    return res.status(500).json({ error: "Erro ao criar empresa" });
+  }
+});
+
+// 👤 Criar cliente
 app.post("/clients", authMiddleware, async (req: any, res: any) => {
   try {
     const { name, phone } = req.body;
@@ -57,21 +86,18 @@ app.post("/clients", authMiddleware, async (req: any, res: any) => {
 
     const uid = req.user.uid;
 
-    // Verifica se o usuário existe no Firestore
     const userDoc = await db.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
       return res.status(403).json({ error: "User profile not found" });
     }
 
-    const userData = userDoc.data();
-    const companyId = userData?.companyId;
+    const companyId = userDoc.data()?.companyId;
 
     if (!companyId) {
       return res.status(400).json({ error: "Usuário sem empresa vinculada" });
     }
 
-    // Cria cliente vinculado à empresa
     const newClient = {
       name,
       phone,
@@ -91,9 +117,14 @@ app.post("/clients", authMiddleware, async (req: any, res: any) => {
   }
 });
 
-// Health check
+// 🧪 Health
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// 🏠 Root
+app.get("/", (req, res) => {
+  res.send("API funcionando 🚀");
 });
 
 const PORT = process.env.PORT || 3000;
